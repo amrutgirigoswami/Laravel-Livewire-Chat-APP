@@ -1,6 +1,19 @@
-<div x-data="{ height: 0, conversationElement: document.getElementById('conversation') }" x-init="height = conversationElement.scrollHeight;
-$nextTick(() => conversationElement.scrollTop = height);"
-    @scroll-bottom.window="console.log('ScrollBottom event received');$nextTick(() => conversationElement.scrollTop = height);"
+<div x-data="{ height: 0,
+conversationElement: document.getElementById('conversation'),
+markAsRead:null
+
+}"
+x-init="height = conversationElement.scrollHeight;
+        $nextTick(() => conversationElement.scrollTop = height);
+        Echo.private('users.{{auth()->user()->id}}')
+        .notification((notification)=>{
+            if(notification['type']=='App\\Notifications\\MessageRead' && notification['coversation_id']=={{$this->selectedConversation->id}})
+            {
+               markAsRead = true;
+            }
+        });
+        "
+    @scroll-bottom.window="$nextTick(() => conversationElement.scrollTop = conversationElement.scrollHeight);"
     class="w-full overflow-hidden">
     <div class="flex flex-col h-full overflow-y-scroll border-b grow">
         {{-- Header --}}
@@ -45,7 +58,7 @@ $nextTick(() => conversationElement.scrollTop = height);"
                         $previousMessage = $loadedMessages->get($key-1);
                     @endphp
                 @endif
-                    <div @class([
+                    <div wire:key="{{ time().$key }}" @class([
                         'max-w-[85%] md:max-w-[78%] flex w-auto gap-2 relative mt-2',
                         'ml-auto' => $message->sender_id == auth()->id(),
                     ])>
@@ -75,10 +88,10 @@ $nextTick(() => conversationElement.scrollTop = height);"
                                 ])>{{ $message->created_at->format('g:i a') }}</p>
                                 {{-- message status if message belongs to auth --}}
                                 @if ($message->sender_id == auth()->id())
-                                    <div>
-                                        @if ($message->isRead())
+                                    <div x-data="{markAsRead:@json($message->isRead())}">
+
                                             {{-- double click --}}
-                                            <span @class('text-gray-200')>
+                                            <span x-cloak x-show="markAsRead" @class('text-gray-200')>
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
                                                     fill="currentColor" class="bi bi-check2-all" viewBox="0 0 16 16">
                                                     <path
@@ -87,16 +100,16 @@ $nextTick(() => conversationElement.scrollTop = height);"
                                                         d="m5.354 7.146.896.897-.707.707-.897-.896a.5.5 0 1 1 .708-.708" />
                                                 </svg>
                                             </span>
-                                        @else
+
                                             {{-- single click --}}
-                                            <span @class('text-gray-200')>
+                                            <span x-show="!markAsRead" @class('text-gray-200')>
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
                                                     fill="currentColor" class="bi bi-check2" viewBox="0 0 16 16">
                                                     <path
                                                         d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0" />
                                                 </svg>
                                             </span>
-                                        @endif
+
                                     </div>
                                 @endif
                             </div>

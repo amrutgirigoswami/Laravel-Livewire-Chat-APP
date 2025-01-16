@@ -3,6 +3,9 @@
 namespace App\Livewire\Chat;
 
 use App\Models\Message;
+use App\Notifications\MessageRead;
+use App\Notifications\MessageSent;
+use Auth;
 use Livewire\Component;
 
 class ChatBox extends Component
@@ -15,6 +18,33 @@ class ChatBox extends Component
     protected $listeners = [
         'loadMore'
     ];
+
+    public function getListeners(){
+        $auth_id = auth()->user()->id;
+
+        return [
+            'loadMore',
+            "echo-private:users.{$auth_id},.Illuminate\\Notifications\\Events\\BroadcastNotificationCreated"=>'broadcastedNotifications'
+        ];
+    }
+
+    public function broadcastedNotifications($event){
+        if($event['type']==MessageSent::class){
+            if($event['conversation_id']==$this->selectedConversation->id){
+                $this->dispatch('scroll-bottom');
+
+                $newMessage=Message::find($event['message_id']);
+
+                $this->loadedMessages->push($newMessage);
+
+                $newMessage->read_at=now();
+                $newMessage->save();
+
+                $this->selectedConversation->getReceiver()
+                    ->notify(new MessageRead($this->selectedConversation->id));
+            }
+        }
+    }
 
     public function loadMore()
     {
@@ -54,6 +84,13 @@ class ChatBox extends Component
         $this->selectedConversation->save();
 
         $this->dispatch('refresh')->to('chat.chat-list');
+
+        $this->selectedConversation->getReceiver()
+            ->notify(new MessageSent(
+                Auth::user(),
+                $createMessage,
+                $this->selectedConversation,
+                $this->selectedConversation->getReceiver()->id));
 
     }
 

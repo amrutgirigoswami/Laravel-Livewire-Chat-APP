@@ -3,7 +3,18 @@
     if (conversationElement) {
         conversationElement.scrollIntoView({ 'behavior': 'smooth' });
     }
-}, 200)" class="flex flex-col h-full overflow-hidden transition-all">
+}, 200)
+
+        Echo.private('users.{{auth()->user()->id}}')
+        .notification((notification)=>{
+            if(notification['type']=='App\\Notifications\\MessageRead' || notification['type']=='App\\Notifications\\MessageSent')
+            {
+                $dispatch('refresh');
+            }
+        });
+
+
+" class="flex flex-col h-full overflow-hidden transition-all">
     <header class="sticky top-0 z-10 w-full px-3 py-2 bg-white">
         <div class="flex items-center justify-between pb-2 border-b">
             <div class="flex items-center gap-2">
@@ -114,6 +125,8 @@
                                                 View Profile
                                             </button>
                                             <button
+                                                onclick="confirm('Are you sure you want to delete this chat?') || event.stopImmediatePropagation()"
+                                                wire:click="deleteByUser('{{encrypt($conversation->id)}}')"
                                                 class="flex items-center w-full gap-3 px-4 py-2 text-sm leading-5 text-left text-gray-500 transition-all duration-150 ease-in-out hover:bg-gray-100 focus:outline-none focus:bg-gray-100">
                                                 <span>
                                                     <svg xmlns="http://www.w3.org/2000/svg" width="16"
